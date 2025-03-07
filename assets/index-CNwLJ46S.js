@@ -53,12 +53,12 @@ const LABEL_NAMES = Object.freeze({
 const DISTANCE = ["5", "10", "15", "20", "30"];
 const CATEGORY = ["한식", "중식", "일식", "양식", "아시안", "기타"];
 const CATEGORY_ASSETS = Object.freeze({
-  한식: "/assets/category-korean.png",
-  중식: "/assets/category-chinese.png",
-  일식: "/assets/category-japanese.png",
-  양식: "/assets/category-western.png",
-  아시안: "/assets/category-asian.png",
-  기타: "/assets/category-etc.png"
+  한식: "./assets/category-korean.png",
+  중식: "./assets/category-chinese.png",
+  일식: "./assets/category-japanese.png",
+  양식: "./assets/category-western.png",
+  아시안: "./assets/category-asian.png",
+  기타: "./assets/category-etc.png"
 });
 const EVENT_TYPES = Object.freeze({
   click: "click",
@@ -91,7 +91,7 @@ class Header {
     $button.setAttribute("aria-label", "음식점 추가");
     $button.type = "button";
     const $img = document.createElement("img");
-    $img.setAttribute("src", "/assets/add-button.png");
+    $img.setAttribute("src", "./assets/add-button.png");
     $img.setAttribute("alt", "음식점 추가");
     $header.appendChild($title);
     $button.appendChild($img);
