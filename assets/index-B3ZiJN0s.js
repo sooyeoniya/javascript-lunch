@@ -205,37 +205,6 @@ class DescriptionInput {
     return $descriptionFormItem;
   }
 }
-class RestaurantListItem {
-  constructor(restaurantInfo) {
-    this.restaurantInfo = restaurantInfo;
-  }
-  render() {
-    const { name, category, description, distance } = this.restaurantInfo;
-    const $item = document.createElement("li");
-    $item.className = "restaurant";
-    const $category = document.createElement("div");
-    $category.className = "restaurant__category";
-    const $categoryImg = document.createElement("img");
-    $categoryImg.className = "category-icon";
-    $categoryImg.src = CATEGORY_ASSETS[category];
-    $categoryImg.setAttribute("alt", category);
-    const $info = document.createElement("div");
-    $info.className = "restaurant__info";
-    const $name = document.createElement("h3");
-    $name.className = "restaurant__name text-subtitle";
-    $name.textContent = name;
-    const $distance = document.createElement("span");
-    $distance.className = "restaurant__distance text-body";
-    $distance.textContent = `캠퍼스부터 ${distance}분 내`;
-    const $description = document.createElement("p");
-    $description.className = "restaurant__description text-body";
-    $description.textContent = description;
-    $item.append($category, $info);
-    $category.append($categoryImg);
-    $info.append($name, $distance, $description);
-    return $item;
-  }
-}
 class SelectBox {
   constructor({ label, options }) {
     this.label = label;
@@ -266,33 +235,21 @@ class SelectBox {
     return $formItem;
   }
 }
-class CategorySelect {
-  render() {
-    const $categorySelect = new SelectBox({
-      label: "category",
-      options: CATEGORY
-    }).render();
-    return $categorySelect;
-  }
-}
-class DistanceSelect {
-  render() {
-    const $distanceSelect = new SelectBox({
-      label: "distance",
-      options: DISTANCE
-    }).render();
-    return $distanceSelect;
-  }
-}
 class RestaurantForm {
   constructor({ onSubmit, onCancel }) {
     __privateAdd(this, _RestaurantForm_instances);
     this.onSubmit = onSubmit;
     this.onCancel = onCancel;
     this.formElements = {
-      category: new CategorySelect().render(),
+      category: new SelectBox({
+        label: "category",
+        options: CATEGORY
+      }).render(),
       name: new NameInput().render(),
-      distance: new DistanceSelect().render(),
+      distance: new SelectBox({
+        label: "distance",
+        options: DISTANCE
+      }).render(),
       description: new DescriptionInput().render(),
       link: new LinkInput().render()
     };
@@ -343,6 +300,37 @@ resetFormData_fn = function() {
     if (query) query.value = "";
   });
 };
+class RestaurantListItem {
+  constructor(restaurantInfo) {
+    this.restaurantInfo = restaurantInfo;
+  }
+  render() {
+    const { name, category, description, distance } = this.restaurantInfo;
+    const $item = document.createElement("li");
+    $item.className = "restaurant";
+    const $category = document.createElement("div");
+    $category.className = "restaurant__category";
+    const $categoryImg = document.createElement("img");
+    $categoryImg.className = "category-icon";
+    $categoryImg.src = CATEGORY_ASSETS[category];
+    $categoryImg.setAttribute("alt", category);
+    const $info = document.createElement("div");
+    $info.className = "restaurant__info";
+    const $name = document.createElement("h3");
+    $name.className = "restaurant__name text-subtitle";
+    $name.textContent = name;
+    const $distance = document.createElement("span");
+    $distance.className = "restaurant__distance text-body";
+    $distance.textContent = `캠퍼스부터 ${distance}분 내`;
+    const $description = document.createElement("p");
+    $description.className = "restaurant__description text-body";
+    $description.textContent = description;
+    $item.append($category, $info);
+    $category.append($categoryImg);
+    $info.append($name, $distance, $description);
+    return $item;
+  }
+}
 class RestaurantList {
   constructor(restaurantList) {
     this.restaurantList = restaurantList;
