@@ -6,7 +6,7 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
-var _RestaurantForm_instances, handleSubmit_fn, getFormData_fn, resetFormData_fn, _App_instances, renderHeader_fn, renderMain_fn, renderRestaurantList_fn, renderBottomSheet_fn, handleFormSubmit_fn, updateRestaurantList_fn, _restaurants, _listeners, _RestaurantStore_instances, notifyListeners_fn;
+var _RestaurantForm_instances, handleSubmit_fn, getFormData_fn, resetFormData_fn, _RestaurantFilter_instances, renderFilterCategory_fn, renderFilterSort_fn, _App_instances, renderHeader_fn, renderMain_fn, renderRestaurantNavBar_fn, renderRestaurantFilter_fn, renderRestaurantList_fn, renderBottomSheet_fn, handleFormSubmit_fn, updateRestaurantList_fn, _restaurants, _listeners, _RestaurantStore_instances, loadFromLocalStorage_fn, saveToLocalStorage_fn, notifyListeners_fn;
 (function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) {
@@ -44,15 +44,42 @@ var _RestaurantForm_instances, handleSubmit_fn, getFormData_fn, resetFormData_fn
     fetch(link.href, fetchOpts);
   }
 })();
+const LABEL_KEYS = Object.freeze({
+  category: "category",
+  name: "name",
+  distance: "distance",
+  description: "description",
+  link: "link"
+});
 const LABEL_NAMES = Object.freeze({
-  category: "카테고리",
-  name: "이름",
-  distance: "거리(도보 이동 시간)",
-  description: "설명",
-  link: "참고 링크"
+  [LABEL_KEYS.category]: "카테고리",
+  [LABEL_KEYS.name]: "이름",
+  [LABEL_KEYS.distance]: "거리(도보 이동 시간)",
+  [LABEL_KEYS.description]: "설명",
+  [LABEL_KEYS.link]: "참고 링크"
+});
+const NAV_BAR_KEYS = Object.freeze({
+  all: "all",
+  favorite: "favorite"
+});
+const NAV_BAR_OPTIONS = Object.freeze({
+  [NAV_BAR_KEYS.all]: "모든 음식점",
+  [NAV_BAR_KEYS.favorite]: "자주 가는 음식점"
+});
+const SORT_OPTIONS = Object.freeze({
+  [LABEL_KEYS.name]: "이름순",
+  [LABEL_KEYS.distance]: "거리순"
 });
 const DISTANCE = ["5", "10", "15", "20", "30"];
-const CATEGORY = ["한식", "중식", "일식", "양식", "아시안", "기타"];
+const CATEGORY = [
+  "전체",
+  "한식",
+  "중식",
+  "일식",
+  "양식",
+  "아시안",
+  "기타"
+];
 const CATEGORY_ASSETS = Object.freeze({
   한식: "./assets/category-korean.png",
   중식: "./assets/category-chinese.png",
@@ -61,9 +88,14 @@ const CATEGORY_ASSETS = Object.freeze({
   아시안: "./assets/category-asian.png",
   기타: "./assets/category-etc.png"
 });
+const FAVORITE_ASSETS = Object.freeze({
+  filled: "./assets/favorite-icon-filled.png",
+  lined: "./assets/favorite-icon-lined.png"
+});
 const EVENT_TYPES = Object.freeze({
   click: "click",
-  submit: "submit"
+  submit: "submit",
+  change: "change"
 });
 const BUTTON_TYPES = Object.freeze({
   add: "add",
@@ -243,7 +275,7 @@ class RestaurantForm {
     this.formElements = {
       category: new SelectBox({
         label: "category",
-        options: CATEGORY
+        options: CATEGORY.slice(1, CATEGORY.length)
       }).render(),
       name: new NameInput().render(),
       distance: new SelectBox({
@@ -301,39 +333,62 @@ resetFormData_fn = function() {
   });
 };
 class RestaurantListItem {
-  constructor(restaurantInfo) {
-    this.restaurantInfo = restaurantInfo;
+  constructor({ id, name, category, description, distance, link, isFavorite }, onToggleFavorite) {
+    this.id = id;
+    this.name = name;
+    this.category = category;
+    this.description = description;
+    this.distance = distance;
+    this.link = link;
+    this.isFavorite = isFavorite;
+    this.onToggleFavorite = onToggleFavorite;
   }
   render() {
-    const { name, category, description, distance } = this.restaurantInfo;
     const $item = document.createElement("li");
     $item.className = "restaurant";
     const $category = document.createElement("div");
     $category.className = "restaurant__category";
     const $categoryImg = document.createElement("img");
     $categoryImg.className = "category-icon";
-    $categoryImg.src = CATEGORY_ASSETS[category];
-    $categoryImg.setAttribute("alt", category);
+    $categoryImg.setAttribute("src", CATEGORY_ASSETS[this.category]);
+    $categoryImg.setAttribute("alt", this.category);
     const $info = document.createElement("div");
     $info.className = "restaurant__info";
     const $name = document.createElement("h3");
     $name.className = "restaurant__name text-subtitle";
-    $name.textContent = name;
+    $name.textContent = this.name;
     const $distance = document.createElement("span");
     $distance.className = "restaurant__distance text-body";
-    $distance.textContent = `캠퍼스부터 ${distance}분 내`;
+    $distance.textContent = `캠퍼스부터 ${this.distance}분 내`;
     const $description = document.createElement("p");
     $description.className = "restaurant__description text-body";
-    $description.textContent = description;
-    $item.append($category, $info);
+    $description.textContent = this.description;
+    const $favoriteButton = document.createElement("button");
+    $favoriteButton.className = "favorite-button";
+    $favoriteButton.setAttribute("aria-label", "자주 가는 음식점 추가");
+    $favoriteButton.type = "button";
+    const $favoriteImg = document.createElement("img");
+    $favoriteImg.className = "favorite-icon";
+    $favoriteImg.setAttribute(
+      "src",
+      this.isFavorite ? FAVORITE_ASSETS.filled : FAVORITE_ASSETS.lined
+    );
+    $favoriteImg.setAttribute("alt", "자주 가는 음식점 추가");
+    $item.append($category, $info, $favoriteButton);
     $category.append($categoryImg);
     $info.append($name, $distance, $description);
+    $favoriteButton.append($favoriteImg);
+    $favoriteButton.addEventListener(
+      EVENT_TYPES.click,
+      () => this.onToggleFavorite(this.id)
+    );
     return $item;
   }
 }
 class RestaurantList {
-  constructor(restaurantList) {
+  constructor(restaurantList, restaurantService2) {
     this.restaurantList = restaurantList;
+    this.restaurantService = restaurantService2;
     this.$listSection = document.createElement("section");
     this.$listSection.className = "restaurant-list-container";
     this.$list = document.createElement("ul");
@@ -342,14 +397,143 @@ class RestaurantList {
   }
   render() {
     this.$list.innerHTML = "";
-    this.restaurantList.forEach(
-      (restaurantInfo) => this.$list.append(new RestaurantListItem(restaurantInfo).render())
-    );
+    this.restaurantList.forEach((restaurantInfo) => {
+      const $listItem = new RestaurantListItem(
+        restaurantInfo,
+        (restaurantId) => {
+          this.restaurantService.toggleFavorite(restaurantId);
+        }
+      );
+      this.$list.append($listItem.render());
+    });
     return this.$listSection;
   }
-  update(restaurantList) {
-    this.restaurantList = restaurantList;
+  updateRestaurantList(options = {
+    tabType: NAV_BAR_KEYS.all,
+    filterType: {
+      categoryFilterType: CATEGORY[0],
+      sortFilterType: Object.keys(SORT_OPTIONS)[0]
+    }
+  }) {
+    this.restaurantList = this.restaurantService.getRestaurants(options);
     this.render();
+  }
+}
+class RestaurantFilter {
+  constructor({ onFilterChange }) {
+    __privateAdd(this, _RestaurantFilter_instances);
+    this.onFilterChange = onFilterChange;
+    this.currentFilterType = {
+      categoryFilterType: CATEGORY[0],
+      sortFilterType: Object.keys(SORT_OPTIONS)[0]
+    };
+  }
+  render() {
+    this.$filterContainer = document.createElement("section");
+    this.$filterContainer.className = "restaurant-filter-container";
+    __privateMethod(this, _RestaurantFilter_instances, renderFilterCategory_fn).call(this);
+    __privateMethod(this, _RestaurantFilter_instances, renderFilterSort_fn).call(this);
+    return this.$filterContainer;
+  }
+  getCurrentFilterType() {
+    return this.currentFilterType;
+  }
+  toggleFilterVisibility({ tabType }) {
+    if (tabType === NAV_BAR_KEYS.favorite) {
+      this.$filterContainer.classList.add("restaurant-filter--open");
+    } else {
+      this.$filterContainer.classList.remove("restaurant-filter--open");
+    }
+  }
+}
+_RestaurantFilter_instances = new WeakSet();
+renderFilterCategory_fn = function() {
+  const $filterCategory = document.createElement("select");
+  $filterCategory.className = "restaurant-filter";
+  $filterCategory.id = "category-filter";
+  $filterCategory.setAttribute("name", "category-filter");
+  this.$filterContainer.append($filterCategory);
+  CATEGORY.forEach((optionType) => {
+    const $option = document.createElement("option");
+    $option.value = optionType;
+    $option.textContent = optionType;
+    $filterCategory.append($option);
+  });
+  $filterCategory.addEventListener(EVENT_TYPES.change, (e) => {
+    const categoryFilterType = e.target.value;
+    this.currentFilterType = {
+      ...this.currentFilterType,
+      categoryFilterType
+    };
+    this.onFilterChange(this.currentFilterType);
+  });
+};
+renderFilterSort_fn = function() {
+  const $filterSort = document.createElement("select");
+  $filterSort.className = "restaurant-filter";
+  $filterSort.id = "sorting-filter";
+  $filterSort.setAttribute("name", "sorting-filter");
+  this.$filterContainer.append($filterSort);
+  Object.keys(SORT_OPTIONS).forEach((optionType) => {
+    const $option = document.createElement("option");
+    $option.value = optionType;
+    $option.textContent = SORT_OPTIONS[optionType];
+    $filterSort.append($option);
+  });
+  $filterSort.addEventListener(EVENT_TYPES.change, (e) => {
+    const sortFilterType = e.target.value;
+    this.currentFilterType = {
+      ...this.currentFilterType,
+      sortFilterType
+    };
+    this.onFilterChange(this.currentFilterType);
+  });
+};
+const activeTabStyle = "active-tab-menu";
+class RestaurantNavBar {
+  constructor({ onTabChange }) {
+    this.onTabChange = onTabChange;
+    this.currentTabType = NAV_BAR_KEYS.all;
+  }
+  render() {
+    const $navBar = document.createElement("nav");
+    const $navList = document.createElement("ul");
+    $navList.className = "restaurant-tab-menu";
+    const $allItem = document.createElement("li");
+    const $allButton = document.createElement("button");
+    $allButton.className = `restaurant-${NAV_BAR_KEYS.all}-menu text-subtitle ${activeTabStyle}`;
+    $allButton.value = NAV_BAR_KEYS.all;
+    $allButton.type = "button";
+    $allButton.textContent = NAV_BAR_OPTIONS[NAV_BAR_KEYS.all];
+    const $favoriteItem = document.createElement("li");
+    const $favoriteButton = document.createElement("button");
+    $favoriteButton.className = `restaurant-${NAV_BAR_KEYS.favorite}-menu text-subtitle`;
+    $favoriteButton.value = NAV_BAR_KEYS.favorite;
+    $favoriteButton.type = "button";
+    $favoriteButton.textContent = NAV_BAR_OPTIONS[NAV_BAR_KEYS.favorite];
+    [$allButton, $favoriteButton].forEach(($button) => {
+      $button.addEventListener(EVENT_TYPES.click, (e) => {
+        this.currentTabType = e.target.value;
+        $navList.querySelectorAll("button").forEach((button) => {
+          button.classList.toggle(
+            activeTabStyle,
+            button.value === this.currentTabType
+          );
+        });
+        if (this.onTabChange) {
+          this.onTabChange(this.currentTabType);
+        }
+      });
+    });
+    $allItem.append($allButton);
+    $navList.append($allItem);
+    $favoriteItem.append($favoriteButton);
+    $navList.append($favoriteItem);
+    $navBar.append($navList);
+    return $navBar;
+  }
+  getCurrentTabType() {
+    return this.currentTabType;
   }
 }
 class App {
@@ -374,12 +558,39 @@ renderHeader_fn = function() {
 renderMain_fn = function() {
   this.$main = document.createElement("main");
   this.$body.append(this.$main);
+  __privateMethod(this, _App_instances, renderRestaurantNavBar_fn).call(this);
+  __privateMethod(this, _App_instances, renderRestaurantFilter_fn).call(this);
   __privateMethod(this, _App_instances, renderRestaurantList_fn).call(this);
   __privateMethod(this, _App_instances, renderBottomSheet_fn).call(this);
 };
+renderRestaurantNavBar_fn = function() {
+  this.$restaurantNavBar = new RestaurantNavBar({
+    onTabChange: (tabType) => {
+      this.$restaurantFilter.toggleFilterVisibility({ tabType });
+      this.$restaurantList.updateRestaurantList({
+        tabType,
+        filterType: this.$restaurantFilter.getCurrentFilterType()
+      });
+    }
+  });
+  this.$main.append(this.$restaurantNavBar.render());
+};
+renderRestaurantFilter_fn = function() {
+  this.$restaurantFilter = new RestaurantFilter({
+    onFilterChange: (filterType) => {
+      this.$restaurantList.updateRestaurantList({
+        tabType: this.$restaurantNavBar.getCurrentTabType(),
+        filterType
+      });
+    }
+  });
+  this.$main.append(this.$restaurantFilter.render());
+};
 renderRestaurantList_fn = function() {
+  const restaurantList = this.restaurantService.getRestaurants();
   this.$restaurantList = new RestaurantList(
-    this.restaurantService.getRestaurants()
+    restaurantList,
+    this.restaurantService
   );
   this.$main.append(this.$restaurantList.render());
 };
@@ -399,8 +610,10 @@ handleFormSubmit_fn = function(newRestaurantInfo) {
   this.$bottomSheet.close();
 };
 updateRestaurantList_fn = function() {
-  const restaurantList = this.restaurantService.getRestaurants();
-  this.$restaurantList.update(restaurantList);
+  this.$restaurantList.updateRestaurantList({
+    tabType: this.$restaurantNavBar.getCurrentTabType(),
+    filterType: this.$restaurantFilter.getCurrentFilterType()
+  });
 };
 class RestaurantService {
   constructor(restaurantStore2) {
@@ -409,22 +622,80 @@ class RestaurantService {
   addRestaurant(restaurantInfo) {
     this.restaurantStore.addRestaurant(restaurantInfo);
   }
-  getRestaurants() {
-    return this.restaurantStore.getRestaurants();
+  getRestaurants(options = {
+    tabType: NAV_BAR_KEYS.all,
+    filterType: {
+      categoryFilterType: CATEGORY[0],
+      sortFilterType: Object.keys(SORT_OPTIONS)[0]
+    }
+  }) {
+    return this.restaurantStore.getRestaurants(options);
+  }
+  toggleFavorite(restaurantName) {
+    this.restaurantStore.toggleFavorite(restaurantName);
   }
 }
+const generateUUID = () => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === "x" ? r : r & 3 | 8;
+    return v.toString(16);
+  });
+};
 class RestaurantStore {
   constructor() {
     __privateAdd(this, _RestaurantStore_instances);
     __privateAdd(this, _restaurants, []);
     __privateAdd(this, _listeners, /* @__PURE__ */ new Set());
+    __privateMethod(this, _RestaurantStore_instances, loadFromLocalStorage_fn).call(this);
   }
   addRestaurant(restaurant) {
-    __privateSet(this, _restaurants, [...__privateGet(this, _restaurants), restaurant]);
+    const newRestaurant = {
+      ...restaurant,
+      id: generateUUID(),
+      isFavorite: false
+    };
+    __privateSet(this, _restaurants, [...__privateGet(this, _restaurants), newRestaurant]);
+    __privateMethod(this, _RestaurantStore_instances, saveToLocalStorage_fn).call(this);
     __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
   }
-  getRestaurants() {
-    return [...__privateGet(this, _restaurants)];
+  getRestaurants({
+    tabType,
+    filterType: { categoryFilterType, sortFilterType }
+  }) {
+    const restaurants = [...__privateGet(this, _restaurants)];
+    const tabTypeFn = {
+      [NAV_BAR_KEYS.all]: (restaurantsInfo) => {
+        if (categoryFilterType === CATEGORY[0]) return restaurantsInfo;
+        return restaurantsInfo.filter(
+          (restaurant) => restaurant.category === categoryFilterType
+        );
+      },
+      [NAV_BAR_KEYS.favorite]: (restaurantsInfo) => {
+        return restaurantsInfo.filter((restaurant) => restaurant.isFavorite);
+      }
+    };
+    const sortFilterTypeFn = {
+      [LABEL_KEYS.name]: (restaurantsInfo) => {
+        return restaurantsInfo.sort((a, b) => a.name.localeCompare(b.name));
+      },
+      [LABEL_KEYS.distance]: (restaurantsInfo) => {
+        return restaurantsInfo.sort(
+          (a, b) => parseInt(a.distance) - parseInt(b.distance)
+        );
+      }
+    };
+    if (tabType === NAV_BAR_KEYS.favorite) {
+      return tabTypeFn[tabType](restaurants);
+    }
+    return sortFilterTypeFn[sortFilterType](tabTypeFn[tabType](restaurants));
+  }
+  toggleFavorite(restaurantId) {
+    __privateSet(this, _restaurants, __privateGet(this, _restaurants).map(
+      (restaurant) => restaurant.id === restaurantId ? { ...restaurant, isFavorite: !restaurant.isFavorite } : restaurant
+    ));
+    __privateMethod(this, _RestaurantStore_instances, saveToLocalStorage_fn).call(this);
+    __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
   }
   subscribe(listener) {
     __privateGet(this, _listeners).add(listener);
@@ -434,6 +705,19 @@ class RestaurantStore {
 _restaurants = new WeakMap();
 _listeners = new WeakMap();
 _RestaurantStore_instances = new WeakSet();
+loadFromLocalStorage_fn = function() {
+  const savedRestaurants = localStorage.getItem("restaurants");
+  const savedFavorites = localStorage.getItem("favorites");
+  __privateSet(this, _restaurants, savedRestaurants ? JSON.parse(savedRestaurants).map((restaurant) => ({
+    ...restaurant,
+    isFavorite: savedFavorites ? JSON.parse(savedFavorites).includes(restaurant.id) : false
+  })) : []);
+};
+saveToLocalStorage_fn = function() {
+  localStorage.setItem("restaurants", JSON.stringify(__privateGet(this, _restaurants)));
+  const favorites = __privateGet(this, _restaurants).filter((restaurant) => restaurant.isFavorite).map((restaurant) => restaurant.id);
+  localStorage.setItem("favorites", JSON.stringify(favorites));
+};
 notifyListeners_fn = function() {
   __privateGet(this, _listeners).forEach((listener) => listener(__privateGet(this, _restaurants)));
 };
