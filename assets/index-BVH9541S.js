@@ -6,7 +6,7 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
-var _RestaurantForm_instances, handleSubmit_fn, getFormData_fn, resetFormData_fn, _RestaurantFilter_instances, renderFilterCategory_fn, renderFilterSort_fn, _App_instances, renderHeader_fn, renderMain_fn, renderRestaurantNavBar_fn, renderRestaurantFilter_fn, renderRestaurantList_fn, renderBottomSheet_fn, handleFormSubmit_fn, updateRestaurantList_fn, _restaurants, _listeners, _RestaurantStore_instances, loadFromLocalStorage_fn, saveToLocalStorage_fn, notifyListeners_fn;
+var _RestaurantForm_instances, renderTitle_fn, renderForm_fn, handleSubmit_fn, getFormData_fn, resetFormData_fn, _RestaurantList_instances, initializeDOM_fn, _RestaurantFilter_instances, renderFilterCategory_fn, renderFilterSort_fn, _RestaurantDetail_instances, initializeDOM_fn2, initializeEventListeners_fn, updateContent_fn, handleSubmit_fn2, _App_instances, renderHeader_fn, renderMain_fn, renderRestaurantNavBar_fn, renderRestaurantFilter_fn, renderRestaurantList_fn, renderSubmitFormBottomSheet_fn, handleSubmitForm_fn, renderOpenDetailBottomSheet_fn, updateRestaurantList_fn, _restaurants, _listeners, _RestaurantStore_instances, loadFromLocalStorage_fn, saveToLocalStorage_fn, notifyListeners_fn;
 (function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) {
@@ -134,22 +134,20 @@ class Header {
   }
 }
 class BottomSheetBase {
-  constructor({ title, $children }) {
-    this.title = title;
+  constructor({ id, $children }) {
+    this.id = id;
     this.$children = $children;
     this.$modal = document.createElement("div");
   }
   render() {
     this.$modal.className = "modal";
+    if (this.id) this.$modal.id = this.id;
     const $backdrop = document.createElement("div");
     $backdrop.className = "modal-backdrop";
     const $container = document.createElement("div");
     $container.className = "modal-container";
-    const $title = document.createElement("h2");
-    $title.className = "modal-title text-title";
-    $title.textContent = this.title;
     this.$modal.append($backdrop, $container);
-    $container.append($title, this.$children);
+    $container.append(this.$children);
     $backdrop.addEventListener(EVENT_TYPES.click, this.close.bind(this));
     return this.$modal;
   }
@@ -162,10 +160,15 @@ class BottomSheetBase {
     }
   }
 }
-const actionVariant = {
-  add: "primary",
-  cancel: "secondary"
-};
+const primaryActions = [BUTTON_TYPES.add, BUTTON_TYPES.close];
+const secondaryActions = [BUTTON_TYPES.cancel, BUTTON_TYPES.delete];
+const actionVariant = [...primaryActions, ...secondaryActions].reduce(
+  (acc, action) => ({
+    ...acc,
+    [action]: primaryActions.includes(action) ? "primary" : "secondary"
+  }),
+  {}
+);
 class Button {
   constructor({ type = "button", text, action }) {
     this.type = type;
@@ -268,8 +271,9 @@ class SelectBox {
   }
 }
 class RestaurantForm {
-  constructor({ onSubmit, onCancel }) {
+  constructor({ title, onSubmit, onCancel }) {
     __privateAdd(this, _RestaurantForm_instances);
+    this.title = title;
     this.onSubmit = onSubmit;
     this.onCancel = onCancel;
     this.formElements = {
@@ -287,33 +291,46 @@ class RestaurantForm {
     };
   }
   render() {
-    const $form = document.createElement("form");
-    const $buttonContainer = document.createElement("div");
-    $buttonContainer.className = "button-container";
-    const $cancelButton = new Button({
-      text: BUTTON_TEXTS.cancel,
-      action: BUTTON_TYPES.cancel
-    }).render();
-    const $addButton = new Button({
-      type: "submit",
-      text: BUTTON_TEXTS.add,
-      action: BUTTON_TYPES.add
-    }).render();
-    $form.append(
-      this.formElements.category,
-      this.formElements.name,
-      this.formElements.distance,
-      this.formElements.description,
-      this.formElements.link,
-      $buttonContainer
-    );
-    $buttonContainer.append($cancelButton, $addButton);
-    $cancelButton.addEventListener(EVENT_TYPES.click, this.onCancel.bind(this));
-    $form.addEventListener(EVENT_TYPES.submit, __privateMethod(this, _RestaurantForm_instances, handleSubmit_fn).bind(this));
-    return $form;
+    const $fragment = new DocumentFragment();
+    const $title = __privateMethod(this, _RestaurantForm_instances, renderTitle_fn).call(this);
+    const $form = __privateMethod(this, _RestaurantForm_instances, renderForm_fn).call(this);
+    $fragment.append($title, $form);
+    return $fragment;
   }
 }
 _RestaurantForm_instances = new WeakSet();
+renderTitle_fn = function() {
+  const $title = document.createElement("h2");
+  $title.className = "modal-title text-title";
+  $title.textContent = this.title;
+  return $title;
+};
+renderForm_fn = function() {
+  const $form = document.createElement("form");
+  const $buttonContainer = document.createElement("div");
+  $buttonContainer.className = "button-container";
+  const $cancelButton = new Button({
+    text: BUTTON_TEXTS.cancel,
+    action: BUTTON_TYPES.cancel
+  }).render();
+  const $addButton = new Button({
+    type: "submit",
+    text: BUTTON_TEXTS.add,
+    action: BUTTON_TYPES.add
+  }).render();
+  $buttonContainer.append($cancelButton, $addButton);
+  $form.append(
+    this.formElements.category,
+    this.formElements.name,
+    this.formElements.distance,
+    this.formElements.description,
+    this.formElements.link,
+    $buttonContainer
+  );
+  $cancelButton.addEventListener(EVENT_TYPES.click, this.onCancel.bind(this));
+  $form.addEventListener(EVENT_TYPES.submit, __privateMethod(this, _RestaurantForm_instances, handleSubmit_fn).bind(this));
+  return $form;
+};
 handleSubmit_fn = function(e) {
   e.preventDefault();
   const newRestaurantInfo = __privateMethod(this, _RestaurantForm_instances, getFormData_fn).call(this);
@@ -333,7 +350,7 @@ resetFormData_fn = function() {
   });
 };
 class RestaurantListItem {
-  constructor({ id, name, category, description, distance, link, isFavorite }, onToggleFavorite) {
+  constructor({ id, name, category, description, distance, link, isFavorite }, onToggleFavorite, onOpenDetail) {
     this.id = id;
     this.name = name;
     this.category = category;
@@ -342,6 +359,7 @@ class RestaurantListItem {
     this.link = link;
     this.isFavorite = isFavorite;
     this.onToggleFavorite = onToggleFavorite;
+    this.onOpenDetail = onOpenDetail;
   }
   render() {
     const $item = document.createElement("li");
@@ -378,31 +396,34 @@ class RestaurantListItem {
     $category.append($categoryImg);
     $info.append($name, $distance, $description);
     $favoriteButton.append($favoriteImg);
-    $favoriteButton.addEventListener(
-      EVENT_TYPES.click,
-      () => this.onToggleFavorite(this.id)
-    );
+    $favoriteButton.addEventListener(EVENT_TYPES.click, (e) => {
+      e.stopPropagation();
+      this.onToggleFavorite(this.id);
+    });
+    $item.addEventListener(EVENT_TYPES.click, (e) => {
+      if (!e.target.closest(".favorite-button")) {
+        this.onOpenDetail(this.id);
+      }
+    });
     return $item;
   }
 }
 class RestaurantList {
-  constructor(restaurantList, restaurantService2) {
+  constructor(restaurantList, { getRestaurants, onToggleFavorite, onOpenDetail }) {
+    __privateAdd(this, _RestaurantList_instances);
     this.restaurantList = restaurantList;
-    this.restaurantService = restaurantService2;
-    this.$listSection = document.createElement("section");
-    this.$listSection.className = "restaurant-list-container";
-    this.$list = document.createElement("ul");
-    this.$list.className = "restaurant-list";
-    this.$listSection.append(this.$list);
+    this.getRestaurants = getRestaurants;
+    this.onToggleFavorite = onToggleFavorite;
+    this.onOpenDetail = onOpenDetail;
+    __privateMethod(this, _RestaurantList_instances, initializeDOM_fn).call(this);
   }
   render() {
     this.$list.innerHTML = "";
     this.restaurantList.forEach((restaurantInfo) => {
       const $listItem = new RestaurantListItem(
         restaurantInfo,
-        (restaurantId) => {
-          this.restaurantService.toggleFavorite(restaurantId);
-        }
+        this.onToggleFavorite,
+        this.onOpenDetail
       );
       this.$list.append($listItem.render());
     });
@@ -415,10 +436,18 @@ class RestaurantList {
       sortFilterType: Object.keys(SORT_OPTIONS)[0]
     }
   }) {
-    this.restaurantList = this.restaurantService.getRestaurants(options);
+    this.restaurantList = this.getRestaurants(options);
     this.render();
   }
 }
+_RestaurantList_instances = new WeakSet();
+initializeDOM_fn = function() {
+  this.$listSection = document.createElement("section");
+  this.$listSection.className = "restaurant-list-container";
+  this.$list = document.createElement("ul");
+  this.$list.className = "restaurant-list";
+  this.$listSection.append(this.$list);
+};
 class RestaurantFilter {
   constructor({ onFilterChange }) {
     __privateAdd(this, _RestaurantFilter_instances);
@@ -536,6 +565,110 @@ class RestaurantNavBar {
     return this.currentTabType;
   }
 }
+class RestaurantDetail {
+  constructor({ onToggleFavorite, onDelete, onClose }) {
+    __privateAdd(this, _RestaurantDetail_instances);
+    this.onToggleFavorite = onToggleFavorite;
+    this.onDelete = onDelete;
+    this.onClose = onClose;
+    __privateMethod(this, _RestaurantDetail_instances, initializeDOM_fn2).call(this);
+    __privateMethod(this, _RestaurantDetail_instances, initializeEventListeners_fn).call(this);
+  }
+  render() {
+    return this.$form;
+  }
+  openDetail({ id, category, name, distance, description, link, isFavorite }) {
+    this.id = id;
+    this.category = category;
+    this.name = name;
+    this.distance = distance;
+    this.description = description;
+    this.link = link;
+    this.isFavorite = isFavorite;
+    __privateMethod(this, _RestaurantDetail_instances, updateContent_fn).call(this);
+  }
+}
+_RestaurantDetail_instances = new WeakSet();
+initializeDOM_fn2 = function() {
+  this.$form = document.createElement("form");
+  const $formContainer = document.createElement("div");
+  $formContainer.className = "restaurant-detail__form-container";
+  const $detailInfo = document.createElement("div");
+  $detailInfo.className = "restaurant-detail__detail-info";
+  const $category = document.createElement("div");
+  $category.className = "restaurant-detail__category";
+  this.$categoryImg = document.createElement("img");
+  this.$categoryImg.className = "category-icon";
+  const $info = document.createElement("div");
+  $info.className = "restaurant-detail__info";
+  this.$name = document.createElement("h3");
+  this.$name.className = "restaurant-detail__name text-subtitle";
+  this.$distance = document.createElement("span");
+  this.$distance.className = "restaurant-detail__distance text-body";
+  this.$description = document.createElement("p");
+  this.$description.className = "restaurant-detail__description text-body";
+  this.$link = document.createElement("a");
+  this.$link.className = "restaurant-detail__link";
+  this.$link.setAttribute("target", "_blank");
+  this.$link.setAttribute("rel", "noopener noreferrer");
+  this.$favoriteButton = document.createElement("button");
+  this.$favoriteButton.className = "favorite-button";
+  this.$favoriteButton.setAttribute("aria-label", "자주 가는 음식점 추가");
+  this.$favoriteButton.type = "button";
+  this.$favoriteImg = document.createElement("img");
+  this.$favoriteImg.className = "favorite-icon";
+  this.$favoriteImg.setAttribute("alt", "자주 가는 음식점 추가");
+  const $buttonContainer = document.createElement("div");
+  $buttonContainer.className = "button-container";
+  const $deleteButton = new Button({
+    type: "submit",
+    text: BUTTON_TEXTS.delete,
+    action: BUTTON_TYPES.delete
+  }).render();
+  this.$closeButton = new Button({
+    text: BUTTON_TEXTS.close,
+    action: BUTTON_TYPES.close
+  }).render();
+  $category.append(this.$categoryImg);
+  $info.append(this.$name, this.$distance, this.$description, this.$link);
+  this.$favoriteButton.append(this.$favoriteImg);
+  $detailInfo.append($category, $info);
+  $formContainer.append($detailInfo, this.$favoriteButton);
+  $buttonContainer.append($deleteButton, this.$closeButton);
+  this.$form.append($formContainer, $buttonContainer);
+};
+initializeEventListeners_fn = function() {
+  this.$favoriteButton.addEventListener(
+    EVENT_TYPES.click,
+    () => this.onToggleFavorite(this.id)
+  );
+  this.$closeButton.addEventListener(
+    EVENT_TYPES.click,
+    this.onClose.bind(this)
+  );
+  this.$form.addEventListener(
+    EVENT_TYPES.submit,
+    __privateMethod(this, _RestaurantDetail_instances, handleSubmit_fn2).bind(this)
+  );
+};
+updateContent_fn = function() {
+  this.$categoryImg.setAttribute("src", CATEGORY_ASSETS[this.category]);
+  this.$categoryImg.setAttribute("alt", this.category);
+  this.$name.textContent = this.name;
+  this.$distance.textContent = `캠퍼스부터 ${this.distance}분 내`;
+  this.$description.textContent = this.description;
+  this.$link.textContent = this.link;
+  this.$link.setAttribute("href", this.link);
+  this.$favoriteImg.setAttribute(
+    "src",
+    this.isFavorite ? FAVORITE_ASSETS.filled : FAVORITE_ASSETS.lined
+  );
+};
+handleSubmit_fn2 = function(e) {
+  e.preventDefault();
+  this.onDelete(this.id);
+  this.onClose();
+};
 class App {
   constructor(restaurantStore2, restaurantService2) {
     __privateAdd(this, _App_instances);
@@ -552,7 +685,9 @@ class App {
 }
 _App_instances = new WeakSet();
 renderHeader_fn = function() {
-  const $header = new Header({ onOpen: () => this.$bottomSheet.open() });
+  const $header = new Header({
+    onOpen: () => this.$submitFormBottomSheet.open()
+  });
   this.$body.append($header.render());
 };
 renderMain_fn = function() {
@@ -561,7 +696,8 @@ renderMain_fn = function() {
   __privateMethod(this, _App_instances, renderRestaurantNavBar_fn).call(this);
   __privateMethod(this, _App_instances, renderRestaurantFilter_fn).call(this);
   __privateMethod(this, _App_instances, renderRestaurantList_fn).call(this);
-  __privateMethod(this, _App_instances, renderBottomSheet_fn).call(this);
+  __privateMethod(this, _App_instances, renderSubmitFormBottomSheet_fn).call(this);
+  __privateMethod(this, _App_instances, renderOpenDetailBottomSheet_fn).call(this);
 };
 renderRestaurantNavBar_fn = function() {
   this.$restaurantNavBar = new RestaurantNavBar({
@@ -588,26 +724,54 @@ renderRestaurantFilter_fn = function() {
 };
 renderRestaurantList_fn = function() {
   const restaurantList = this.restaurantService.getRestaurants();
-  this.$restaurantList = new RestaurantList(
-    restaurantList,
-    this.restaurantService
-  );
+  this.$restaurantList = new RestaurantList(restaurantList, {
+    getRestaurants: (options) => {
+      return this.restaurantService.getRestaurants(options);
+    },
+    onToggleFavorite: (restaurantId) => {
+      this.restaurantService.toggleFavorite(restaurantId);
+    },
+    onOpenDetail: (restaurantId) => {
+      const restaurantInfo = this.restaurantService.getRestaurantInfo(restaurantId);
+      this.$restaurantDetail.openDetail(restaurantInfo);
+      this.$openDetailBottomSheet.open();
+    }
+  });
   this.$main.append(this.$restaurantList.render());
 };
-renderBottomSheet_fn = function() {
+renderSubmitFormBottomSheet_fn = function() {
   const $restaurantForm = new RestaurantForm({
-    onSubmit: __privateMethod(this, _App_instances, handleFormSubmit_fn).bind(this),
-    onCancel: () => this.$bottomSheet.close()
-  });
-  this.$bottomSheet = new BottomSheetBase({
     title: "새로운 음식점",
+    onSubmit: __privateMethod(this, _App_instances, handleSubmitForm_fn).bind(this),
+    onCancel: () => this.$submitFormBottomSheet.close()
+  });
+  this.$submitFormBottomSheet = new BottomSheetBase({
+    id: "submit-form",
     $children: $restaurantForm.render()
   });
-  this.$main.append(this.$bottomSheet.render());
+  this.$main.append(this.$submitFormBottomSheet.render());
 };
-handleFormSubmit_fn = function(newRestaurantInfo) {
+handleSubmitForm_fn = function(newRestaurantInfo) {
   this.restaurantService.addRestaurant(newRestaurantInfo);
-  this.$bottomSheet.close();
+  this.$submitFormBottomSheet.close();
+};
+renderOpenDetailBottomSheet_fn = function() {
+  this.$restaurantDetail = new RestaurantDetail({
+    onToggleFavorite: (restaurantId) => {
+      this.restaurantService.toggleFavorite(restaurantId);
+      const updatedInfo = this.restaurantService.getRestaurantInfo(restaurantId);
+      this.$restaurantDetail.openDetail(updatedInfo);
+    },
+    onDelete: (restaurantId) => {
+      this.restaurantService.deleteRestaurant(restaurantId);
+    },
+    onClose: () => this.$openDetailBottomSheet.close()
+  });
+  this.$openDetailBottomSheet = new BottomSheetBase({
+    id: "open-detail",
+    $children: this.$restaurantDetail.render()
+  });
+  this.$main.append(this.$openDetailBottomSheet.render());
 };
 updateRestaurantList_fn = function() {
   this.$restaurantList.updateRestaurantList({
@@ -622,6 +786,9 @@ class RestaurantService {
   addRestaurant(restaurantInfo) {
     this.restaurantStore.addRestaurant(restaurantInfo);
   }
+  deleteRestaurant(restaurantId) {
+    this.restaurantStore.deleteRestaurant(restaurantId);
+  }
   getRestaurants(options = {
     tabType: NAV_BAR_KEYS.all,
     filterType: {
@@ -631,8 +798,11 @@ class RestaurantService {
   }) {
     return this.restaurantStore.getRestaurants(options);
   }
-  toggleFavorite(restaurantName) {
-    this.restaurantStore.toggleFavorite(restaurantName);
+  getRestaurantInfo(restaurantId) {
+    return this.restaurantStore.getRestaurantInfo(restaurantId);
+  }
+  toggleFavorite(restaurantId) {
+    this.restaurantStore.toggleFavorite(restaurantId);
   }
 }
 const generateUUID = () => {
@@ -656,6 +826,13 @@ class RestaurantStore {
       isFavorite: false
     };
     __privateSet(this, _restaurants, [...__privateGet(this, _restaurants), newRestaurant]);
+    __privateMethod(this, _RestaurantStore_instances, saveToLocalStorage_fn).call(this);
+    __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
+  }
+  deleteRestaurant(restaurantId) {
+    __privateSet(this, _restaurants, __privateGet(this, _restaurants).filter(
+      (restaurant) => restaurant.id !== restaurantId
+    ));
     __privateMethod(this, _RestaurantStore_instances, saveToLocalStorage_fn).call(this);
     __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
   }
@@ -690,6 +867,11 @@ class RestaurantStore {
     }
     return sortFilterTypeFn[sortFilterType](tabTypeFn[tabType](restaurants));
   }
+  getRestaurantInfo(restaurantId) {
+    return __privateGet(this, _restaurants).find(
+      (restaurant) => restaurant.id === restaurantId
+    );
+  }
   toggleFavorite(restaurantId) {
     __privateSet(this, _restaurants, __privateGet(this, _restaurants).map(
       (restaurant) => restaurant.id === restaurantId ? { ...restaurant, isFavorite: !restaurant.isFavorite } : restaurant
@@ -707,16 +889,10 @@ _listeners = new WeakMap();
 _RestaurantStore_instances = new WeakSet();
 loadFromLocalStorage_fn = function() {
   const savedRestaurants = localStorage.getItem("restaurants");
-  const savedFavorites = localStorage.getItem("favorites");
-  __privateSet(this, _restaurants, savedRestaurants ? JSON.parse(savedRestaurants).map((restaurant) => ({
-    ...restaurant,
-    isFavorite: savedFavorites ? JSON.parse(savedFavorites).includes(restaurant.id) : false
-  })) : []);
+  __privateSet(this, _restaurants, savedRestaurants ? JSON.parse(savedRestaurants) : []);
 };
 saveToLocalStorage_fn = function() {
   localStorage.setItem("restaurants", JSON.stringify(__privateGet(this, _restaurants)));
-  const favorites = __privateGet(this, _restaurants).filter((restaurant) => restaurant.isFavorite).map((restaurant) => restaurant.id);
-  localStorage.setItem("favorites", JSON.stringify(favorites));
 };
 notifyListeners_fn = function() {
   __privateGet(this, _listeners).forEach((listener) => listener(__privateGet(this, _restaurants)));
