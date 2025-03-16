@@ -1,12 +1,15 @@
+var __defProp = Object.defineProperty;
 var __typeError = (msg) => {
   throw TypeError(msg);
 };
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
 var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
-var _RestaurantForm_instances, renderTitle_fn, renderForm_fn, handleSubmit_fn, getFormData_fn, resetFormData_fn, _RestaurantList_instances, initializeDOM_fn, _RestaurantFilter_instances, renderFilterCategory_fn, renderFilterSort_fn, _RestaurantDetail_instances, initializeDOM_fn2, initializeEventListeners_fn, updateContent_fn, handleSubmit_fn2, _App_instances, renderHeader_fn, renderMain_fn, renderRestaurantNavBar_fn, renderRestaurantFilter_fn, renderRestaurantList_fn, renderSubmitFormBottomSheet_fn, handleSubmitForm_fn, renderOpenDetailBottomSheet_fn, updateRestaurantList_fn, _restaurants, _listeners, _RestaurantStore_instances, loadFromLocalStorage_fn, saveToLocalStorage_fn, notifyListeners_fn;
+var _RestaurantForm_instances, renderTitle_fn, renderForm_fn, handleSubmit_fn, getInputValue_fn, getFormData_fn, resetFormData_fn, _RestaurantList_instances, initializeDOM_fn, _RestaurantFilter_instances, renderFilterCategory_fn, renderFilterSort_fn, _RestaurantDetail_instances, initializeDOM_fn2, initializeEventListeners_fn, updateContent_fn, handleSubmit_fn2, _App_instances, renderHeader_fn, renderMain_fn, renderRestaurantNavBar_fn, renderRestaurantFilter_fn, renderRestaurantList_fn, renderSubmitFormBottomSheet_fn, handleSubmitForm_fn, renderOpenDetailBottomSheet_fn, updateRestaurantList_fn, _restaurants, _listeners, _RestaurantStore_instances, loadFromLocalStorage_fn, saveToLocalStorage_fn, notifyListeners_fn;
 (function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) {
@@ -111,6 +114,7 @@ const BUTTON_TEXTS = Object.freeze({
 });
 class Header {
   constructor({ onOpen }) {
+    __publicField(this, "onOpen");
     this.onOpen = onOpen;
   }
   render() {
@@ -135,6 +139,9 @@ class Header {
 }
 class BottomSheetBase {
   constructor({ id, $children }) {
+    __publicField(this, "id");
+    __publicField(this, "$children");
+    __publicField(this, "$modal");
     this.id = id;
     this.$children = $children;
     this.$modal = document.createElement("div");
@@ -155,13 +162,16 @@ class BottomSheetBase {
     this.$modal.classList.add("modal--open");
   }
   close(e) {
-    if (!e || !e.target.closest(".modal-container")) {
+    if (!e || !(e.target instanceof HTMLElement) || !e.target.closest(".modal-container")) {
       this.$modal.classList.remove("modal--open");
     }
   }
 }
 const primaryActions = [BUTTON_TYPES.add, BUTTON_TYPES.close];
-const secondaryActions = [BUTTON_TYPES.cancel, BUTTON_TYPES.delete];
+const secondaryActions = [
+  BUTTON_TYPES.cancel,
+  BUTTON_TYPES.delete
+];
 const actionVariant = [...primaryActions, ...secondaryActions].reduce(
   (acc, action) => ({
     ...acc,
@@ -171,13 +181,16 @@ const actionVariant = [...primaryActions, ...secondaryActions].reduce(
 );
 class Button {
   constructor({ type = "button", text, action }) {
+    __publicField(this, "type");
+    __publicField(this, "text");
+    __publicField(this, "action");
     this.type = type;
     this.text = text;
     this.action = action;
   }
   render() {
     const $button = document.createElement("button");
-    $button.type = this.type;
+    if (this.type) $button.type = this.type;
     $button.textContent = this.text;
     $button.className = `button button--${actionVariant[this.action]} text-caption`;
     return $button;
@@ -242,6 +255,8 @@ class DescriptionInput {
 }
 class SelectBox {
   constructor({ label, options }) {
+    __publicField(this, "label");
+    __publicField(this, "options");
     this.label = label;
     this.options = options;
   }
@@ -273,6 +288,10 @@ class SelectBox {
 class RestaurantForm {
   constructor({ title, onSubmit, onCancel }) {
     __privateAdd(this, _RestaurantForm_instances);
+    __publicField(this, "title");
+    __publicField(this, "onSubmit");
+    __publicField(this, "onCancel");
+    __publicField(this, "formElements");
     this.title = title;
     this.onSubmit = onSubmit;
     this.onCancel = onCancel;
@@ -337,11 +356,32 @@ handleSubmit_fn = function(e) {
   this.onSubmit(newRestaurantInfo);
   __privateMethod(this, _RestaurantForm_instances, resetFormData_fn).call(this);
 };
+getInputValue_fn = function(key) {
+  const element = this.formElements[key];
+  if (!element) {
+    return "";
+  }
+  const selectorMap = {
+    category: "select",
+    name: "input",
+    distance: "select",
+    description: "textarea",
+    link: "input"
+  };
+  const el = element.querySelector(selectorMap[key]);
+  if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
+    return el.value ?? "";
+  }
+  return "";
+};
 getFormData_fn = function() {
-  return Object.entries(this.formElements).reduce((acc, [key, el]) => {
-    acc[key] = el.querySelector("input, select, textarea").value;
-    return acc;
-  }, {});
+  return {
+    category: __privateMethod(this, _RestaurantForm_instances, getInputValue_fn).call(this, "category"),
+    name: __privateMethod(this, _RestaurantForm_instances, getInputValue_fn).call(this, "name"),
+    distance: __privateMethod(this, _RestaurantForm_instances, getInputValue_fn).call(this, "distance"),
+    description: __privateMethod(this, _RestaurantForm_instances, getInputValue_fn).call(this, "description"),
+    link: __privateMethod(this, _RestaurantForm_instances, getInputValue_fn).call(this, "link")
+  };
 };
 resetFormData_fn = function() {
   Object.values(this.formElements).forEach((el) => {
@@ -350,13 +390,27 @@ resetFormData_fn = function() {
   });
 };
 class RestaurantListItem {
-  constructor({ id, name, category, description, distance, link, isFavorite }, onToggleFavorite, onOpenDetail) {
+  constructor({
+    id,
+    name,
+    category,
+    description,
+    distance,
+    isFavorite
+  }, onToggleFavorite, onOpenDetail) {
+    __publicField(this, "id");
+    __publicField(this, "category");
+    __publicField(this, "name");
+    __publicField(this, "distance");
+    __publicField(this, "description");
+    __publicField(this, "isFavorite");
+    __publicField(this, "onToggleFavorite");
+    __publicField(this, "onOpenDetail");
     this.id = id;
     this.name = name;
     this.category = category;
     this.description = description;
     this.distance = distance;
-    this.link = link;
     this.isFavorite = isFavorite;
     this.onToggleFavorite = onToggleFavorite;
     this.onOpenDetail = onOpenDetail;
@@ -380,7 +434,7 @@ class RestaurantListItem {
     $distance.textContent = `캠퍼스부터 ${this.distance}분 내`;
     const $description = document.createElement("p");
     $description.className = "restaurant__description text-body";
-    $description.textContent = this.description;
+    if (this.description) $description.textContent = this.description;
     const $favoriteButton = document.createElement("button");
     $favoriteButton.className = "favorite-button";
     $favoriteButton.setAttribute("aria-label", "자주 가는 음식점 추가");
@@ -401,7 +455,7 @@ class RestaurantListItem {
       this.onToggleFavorite(this.id);
     });
     $item.addEventListener(EVENT_TYPES.click, (e) => {
-      if (!e.target.closest(".favorite-button")) {
+      if (e.target && e.target instanceof HTMLElement && !e.target.closest(".favorite-button")) {
         this.onOpenDetail(this.id);
       }
     });
@@ -433,7 +487,7 @@ class RestaurantList {
     tabType: NAV_BAR_KEYS.all,
     filterType: {
       categoryFilterType: CATEGORY[0],
-      sortFilterType: Object.keys(SORT_OPTIONS)[0]
+      sortFilterType: "name"
     }
   }) {
     this.restaurantList = this.getRestaurants(options);
@@ -451,10 +505,13 @@ initializeDOM_fn = function() {
 class RestaurantFilter {
   constructor({ onFilterChange }) {
     __privateAdd(this, _RestaurantFilter_instances);
+    __publicField(this, "onFilterChange");
+    __publicField(this, "currentFilterType");
+    __publicField(this, "$filterContainer");
     this.onFilterChange = onFilterChange;
     this.currentFilterType = {
       categoryFilterType: CATEGORY[0],
-      sortFilterType: Object.keys(SORT_OPTIONS)[0]
+      sortFilterType: "name"
     };
   }
   render() {
@@ -489,6 +546,7 @@ renderFilterCategory_fn = function() {
     $filterCategory.append($option);
   });
   $filterCategory.addEventListener(EVENT_TYPES.change, (e) => {
+    if (!e.target || !(e.target instanceof HTMLSelectElement)) return;
     const categoryFilterType = e.target.value;
     this.currentFilterType = {
       ...this.currentFilterType,
@@ -503,13 +561,16 @@ renderFilterSort_fn = function() {
   $filterSort.id = "sorting-filter";
   $filterSort.setAttribute("name", "sorting-filter");
   this.$filterContainer.append($filterSort);
-  Object.keys(SORT_OPTIONS).forEach((optionType) => {
-    const $option = document.createElement("option");
-    $option.value = optionType;
-    $option.textContent = SORT_OPTIONS[optionType];
-    $filterSort.append($option);
-  });
+  Object.keys(SORT_OPTIONS).forEach(
+    (optionType) => {
+      const $option = document.createElement("option");
+      $option.value = optionType;
+      $option.textContent = SORT_OPTIONS[optionType];
+      $filterSort.append($option);
+    }
+  );
   $filterSort.addEventListener(EVENT_TYPES.change, (e) => {
+    if (!e.target || !(e.target instanceof HTMLSelectElement)) return;
     const sortFilterType = e.target.value;
     this.currentFilterType = {
       ...this.currentFilterType,
@@ -521,6 +582,8 @@ renderFilterSort_fn = function() {
 const activeTabStyle = "active-tab-menu";
 class RestaurantNavBar {
   constructor({ onTabChange }) {
+    __publicField(this, "onTabChange");
+    __publicField(this, "currentTabType");
     this.onTabChange = onTabChange;
     this.currentTabType = NAV_BAR_KEYS.all;
   }
@@ -542,7 +605,9 @@ class RestaurantNavBar {
     $favoriteButton.textContent = NAV_BAR_OPTIONS[NAV_BAR_KEYS.favorite];
     [$allButton, $favoriteButton].forEach(($button) => {
       $button.addEventListener(EVENT_TYPES.click, (e) => {
-        this.currentTabType = e.target.value;
+        if (e.target instanceof HTMLButtonElement) {
+          this.currentTabType = e.target.value;
+        }
         $navList.querySelectorAll("button").forEach((button) => {
           button.classList.toggle(
             activeTabStyle,
@@ -568,6 +633,25 @@ class RestaurantNavBar {
 class RestaurantDetail {
   constructor({ onToggleFavorite, onDelete, onClose }) {
     __privateAdd(this, _RestaurantDetail_instances);
+    __publicField(this, "onToggleFavorite");
+    __publicField(this, "onDelete");
+    __publicField(this, "onClose");
+    __publicField(this, "$form");
+    __publicField(this, "$categoryImg");
+    __publicField(this, "$name");
+    __publicField(this, "$distance");
+    __publicField(this, "$description");
+    __publicField(this, "$link");
+    __publicField(this, "$favoriteButton");
+    __publicField(this, "$favoriteImg");
+    __publicField(this, "$closeButton");
+    __publicField(this, "id");
+    __publicField(this, "category");
+    __publicField(this, "name");
+    __publicField(this, "distance");
+    __publicField(this, "description");
+    __publicField(this, "link");
+    __publicField(this, "isFavorite");
     this.onToggleFavorite = onToggleFavorite;
     this.onDelete = onDelete;
     this.onClose = onClose;
@@ -577,13 +661,21 @@ class RestaurantDetail {
   render() {
     return this.$form;
   }
-  openDetail({ id, category, name, distance, description, link, isFavorite }) {
+  openDetail({
+    id,
+    category,
+    name,
+    distance,
+    description,
+    link,
+    isFavorite
+  }) {
     this.id = id;
     this.category = category;
     this.name = name;
     this.distance = distance;
-    this.description = description;
-    this.link = link;
+    if (description) this.description = description;
+    if (link) this.link = link;
     this.isFavorite = isFavorite;
     __privateMethod(this, _RestaurantDetail_instances, updateContent_fn).call(this);
   }
@@ -656,9 +748,11 @@ updateContent_fn = function() {
   this.$categoryImg.setAttribute("alt", this.category);
   this.$name.textContent = this.name;
   this.$distance.textContent = `캠퍼스부터 ${this.distance}분 내`;
-  this.$description.textContent = this.description;
-  this.$link.textContent = this.link;
-  this.$link.setAttribute("href", this.link);
+  if (this.description) this.$description.textContent = this.description;
+  if (this.link) {
+    this.$link.textContent = this.link;
+    this.$link.setAttribute("href", this.link);
+  }
   this.$favoriteImg.setAttribute(
     "src",
     this.isFavorite ? FAVORITE_ASSETS.filled : FAVORITE_ASSETS.lined
@@ -672,6 +766,16 @@ handleSubmit_fn2 = function(e) {
 class App {
   constructor(restaurantStore2, restaurantService2) {
     __privateAdd(this, _App_instances);
+    __publicField(this, "$body");
+    __publicField(this, "$main");
+    __publicField(this, "$restaurantNavBar");
+    __publicField(this, "$restaurantFilter");
+    __publicField(this, "$restaurantList");
+    __publicField(this, "$submitFormBottomSheet");
+    __publicField(this, "$openDetailBottomSheet");
+    __publicField(this, "$restaurantDetail");
+    this.restaurantStore = restaurantStore2;
+    this.restaurantService = restaurantService2;
     this.restaurantStore = restaurantStore2;
     this.restaurantService = restaurantService2;
     this.render();
@@ -733,7 +837,7 @@ renderRestaurantList_fn = function() {
     },
     onOpenDetail: (restaurantId) => {
       const restaurantInfo = this.restaurantService.getRestaurantInfo(restaurantId);
-      this.$restaurantDetail.openDetail(restaurantInfo);
+      if (restaurantInfo) this.$restaurantDetail.openDetail(restaurantInfo);
       this.$openDetailBottomSheet.open();
     }
   });
@@ -760,7 +864,7 @@ renderOpenDetailBottomSheet_fn = function() {
     onToggleFavorite: (restaurantId) => {
       this.restaurantService.toggleFavorite(restaurantId);
       const updatedInfo = this.restaurantService.getRestaurantInfo(restaurantId);
-      this.$restaurantDetail.openDetail(updatedInfo);
+      if (updatedInfo) this.$restaurantDetail.openDetail(updatedInfo);
     },
     onDelete: (restaurantId) => {
       this.restaurantService.deleteRestaurant(restaurantId);
@@ -781,6 +885,7 @@ updateRestaurantList_fn = function() {
 };
 class RestaurantService {
   constructor(restaurantStore2) {
+    __publicField(this, "restaurantStore");
     this.restaurantStore = restaurantStore2;
   }
   addRestaurant(restaurantInfo) {
@@ -793,7 +898,7 @@ class RestaurantService {
     tabType: NAV_BAR_KEYS.all,
     filterType: {
       categoryFilterType: CATEGORY[0],
-      sortFilterType: Object.keys(SORT_OPTIONS)[0]
+      sortFilterType: "name"
     }
   }) {
     return this.restaurantStore.getRestaurants(options);
@@ -819,9 +924,9 @@ class RestaurantStore {
     __privateAdd(this, _listeners, /* @__PURE__ */ new Set());
     __privateMethod(this, _RestaurantStore_instances, loadFromLocalStorage_fn).call(this);
   }
-  addRestaurant(restaurant) {
+  addRestaurant(restaurantInfo) {
     const newRestaurant = {
-      ...restaurant,
+      ...restaurantInfo,
       id: generateUUID(),
       isFavorite: false
     };
@@ -898,5 +1003,7 @@ notifyListeners_fn = function() {
   __privateGet(this, _listeners).forEach((listener) => listener(__privateGet(this, _restaurants)));
 };
 const restaurantStore = new RestaurantStore();
-const restaurantService = new RestaurantService(restaurantStore);
+const restaurantService = new RestaurantService(
+  restaurantStore
+);
 new App(restaurantStore, restaurantService);
