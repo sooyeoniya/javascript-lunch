@@ -434,7 +434,7 @@ class RestaurantListItem {
     $distance.textContent = `캠퍼스부터 ${this.distance}분 내`;
     const $description = document.createElement("p");
     $description.className = "restaurant__description text-body";
-    if (this.description) $description.textContent = this.description;
+    $description.textContent = this.description;
     const $favoriteButton = document.createElement("button");
     $favoriteButton.className = "favorite-button";
     $favoriteButton.setAttribute("aria-label", "자주 가는 음식점 추가");
@@ -674,8 +674,8 @@ class RestaurantDetail {
     this.category = category;
     this.name = name;
     this.distance = distance;
-    if (description) this.description = description;
-    if (link) this.link = link;
+    this.description = description;
+    this.link = link;
     this.isFavorite = isFavorite;
     __privateMethod(this, _RestaurantDetail_instances, updateContent_fn).call(this);
   }
@@ -748,11 +748,9 @@ updateContent_fn = function() {
   this.$categoryImg.setAttribute("alt", this.category);
   this.$name.textContent = this.name;
   this.$distance.textContent = `캠퍼스부터 ${this.distance}분 내`;
-  if (this.description) this.$description.textContent = this.description;
-  if (this.link) {
-    this.$link.textContent = this.link;
-    this.$link.setAttribute("href", this.link);
-  }
+  this.$description.textContent = this.description;
+  this.$link.textContent = this.link;
+  this.$link.setAttribute("href", this.link);
   this.$favoriteImg.setAttribute(
     "src",
     this.isFavorite ? FAVORITE_ASSETS.filled : FAVORITE_ASSETS.lined
