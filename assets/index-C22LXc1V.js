@@ -463,8 +463,18 @@ class RestaurantListItem {
   }
 }
 class RestaurantList {
-  constructor(restaurantList, { getRestaurants, onToggleFavorite, onOpenDetail }) {
+  constructor(restaurantList, {
+    getRestaurants,
+    onToggleFavorite,
+    onOpenDetail
+  }) {
     __privateAdd(this, _RestaurantList_instances);
+    __publicField(this, "restaurantList");
+    __publicField(this, "getRestaurants");
+    __publicField(this, "onToggleFavorite");
+    __publicField(this, "onOpenDetail");
+    __publicField(this, "$listSection");
+    __publicField(this, "$list");
     this.restaurantList = restaurantList;
     this.getRestaurants = getRestaurants;
     this.onToggleFavorite = onToggleFavorite;
