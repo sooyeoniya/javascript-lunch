@@ -418,6 +418,7 @@ class RestaurantListItem {
   render() {
     const $item = document.createElement("li");
     $item.className = "restaurant";
+    $item.id = this.id;
     const $category = document.createElement("div");
     $category.className = "restaurant__category";
     const $categoryImg = document.createElement("img");
@@ -568,8 +569,8 @@ renderFilterCategory_fn = function() {
 renderFilterSort_fn = function() {
   const $filterSort = document.createElement("select");
   $filterSort.className = "restaurant-filter";
-  $filterSort.id = "sorting-filter";
-  $filterSort.setAttribute("name", "sorting-filter");
+  $filterSort.id = "sort-filter";
+  $filterSort.setAttribute("name", "sort-filter");
   this.$filterContainer.append($filterSort);
   Object.keys(SORT_OPTIONS).forEach(
     (optionType) => {
