@@ -9,7 +9,7 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
-var _RestaurantForm_instances, renderTitle_fn, renderForm_fn, handleSubmit_fn, getInputValue_fn, getFormData_fn, resetFormData_fn, _RestaurantList_instances, initializeDOM_fn, _RestaurantFilter_instances, renderFilterCategory_fn, renderFilterSort_fn, _RestaurantDetail_instances, initializeDOM_fn2, initializeEventListeners_fn, updateContent_fn, handleSubmit_fn2, _App_instances, renderHeader_fn, renderMain_fn, renderRestaurantNavBar_fn, renderRestaurantFilter_fn, renderRestaurantList_fn, renderSubmitFormBottomSheet_fn, handleSubmitForm_fn, renderOpenDetailBottomSheet_fn, updateRestaurantList_fn, _restaurants, _listeners, _RestaurantStore_instances, loadFromLocalStorage_fn, saveToLocalStorage_fn, notifyListeners_fn;
+var _RestaurantForm_instances, renderTitle_fn, renderForm_fn, handleSubmit_fn, getInputValue_fn, getFormData_fn, resetFormData_fn, _RestaurantList_instances, initializeDOM_fn, _RestaurantFilter_instances, renderFilterCategory_fn, renderFilterSort_fn, _RestaurantDetail_instances, initializeDOM_fn2, initializeEventListeners_fn, updateContent_fn, handleSubmit_fn2, _App_instances, renderHeader_fn, renderMain_fn, renderRestaurantNavBar_fn, renderRestaurantFilter_fn, renderRestaurantList_fn, renderSubmitFormBottomSheet_fn, renderOpenDetailBottomSheet_fn, _restaurants, _currentFilter, _selectedRestaurant, _listeners, _RestaurantStore_instances, loadFromLocalStorage_fn, saveToLocalStorage_fn, notifyListeners_fn;
 (function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) {
@@ -464,20 +464,14 @@ class RestaurantListItem {
   }
 }
 class RestaurantList {
-  constructor(restaurantList, {
-    getRestaurants,
-    onToggleFavorite,
-    onOpenDetail
-  }) {
+  constructor(restaurantList, { onToggleFavorite, onOpenDetail }) {
     __privateAdd(this, _RestaurantList_instances);
     __publicField(this, "restaurantList");
-    __publicField(this, "getRestaurants");
     __publicField(this, "onToggleFavorite");
     __publicField(this, "onOpenDetail");
     __publicField(this, "$listSection");
     __publicField(this, "$list");
     this.restaurantList = restaurantList;
-    this.getRestaurants = getRestaurants;
     this.onToggleFavorite = onToggleFavorite;
     this.onOpenDetail = onOpenDetail;
     __privateMethod(this, _RestaurantList_instances, initializeDOM_fn).call(this);
@@ -494,14 +488,8 @@ class RestaurantList {
     });
     return this.$listSection;
   }
-  updateRestaurantList(options = {
-    tabType: NAV_BAR_KEYS.all,
-    filterType: {
-      categoryFilterType: CATEGORY[0],
-      sortFilterType: "name"
-    }
-  }) {
-    this.restaurantList = this.getRestaurants(options);
+  updateRestaurantList(filteredRestaurants) {
+    this.restaurantList = filteredRestaurants;
     this.render();
   }
 }
@@ -531,9 +519,6 @@ class RestaurantFilter {
     __privateMethod(this, _RestaurantFilter_instances, renderFilterCategory_fn).call(this);
     __privateMethod(this, _RestaurantFilter_instances, renderFilterSort_fn).call(this);
     return this.$filterContainer;
-  }
-  getCurrentFilterType() {
-    return this.currentFilterType;
   }
   toggleFilterVisibility({ tabType }) {
     if (tabType === NAV_BAR_KEYS.favorite) {
@@ -637,9 +622,6 @@ class RestaurantNavBar {
     $navBar.append($navList);
     return $navBar;
   }
-  getCurrentTabType() {
-    return this.currentTabType;
-  }
 }
 class RestaurantDetail {
   constructor({ onToggleFavorite, onDelete, onClose }) {
@@ -672,7 +654,7 @@ class RestaurantDetail {
   render() {
     return this.$form;
   }
-  openDetail({
+  updateAndOpenDetail({
     id,
     category,
     name,
@@ -773,7 +755,7 @@ handleSubmit_fn2 = function(e) {
   this.onClose();
 };
 class App {
-  constructor(restaurantStore2, restaurantService2) {
+  constructor(store2) {
     __privateAdd(this, _App_instances);
     __publicField(this, "$body");
     __publicField(this, "$main");
@@ -783,12 +765,16 @@ class App {
     __publicField(this, "$submitFormBottomSheet");
     __publicField(this, "$openDetailBottomSheet");
     __publicField(this, "$restaurantDetail");
-    this.restaurantStore = restaurantStore2;
-    this.restaurantService = restaurantService2;
-    this.restaurantStore = restaurantStore2;
-    this.restaurantService = restaurantService2;
+    this.store = store2;
+    this.store = store2;
     this.render();
-    this.restaurantStore.subscribe(() => __privateMethod(this, _App_instances, updateRestaurantList_fn).call(this));
+    this.store.subscribe(
+      "restaurantList",
+      (state) => this.$restaurantList.updateRestaurantList(state.filteredRestaurants)
+    );
+    this.store.subscribe("restaurantDetail", (state) => {
+      this.$restaurantDetail.updateAndOpenDetail(state.selectedRestaurant);
+    });
   }
   render() {
     this.$body = document.querySelector("body");
@@ -815,11 +801,11 @@ renderMain_fn = function() {
 renderRestaurantNavBar_fn = function() {
   this.$restaurantNavBar = new RestaurantNavBar({
     onTabChange: (tabType) => {
-      this.$restaurantFilter.toggleFilterVisibility({ tabType });
-      this.$restaurantList.updateRestaurantList({
-        tabType,
-        filterType: this.$restaurantFilter.getCurrentFilterType()
+      this.store.setFilter({
+        ...this.store.state.currentFilter,
+        tabType
       });
+      this.$restaurantFilter.toggleFilterVisibility({ tabType });
     }
   });
   this.$main.append(this.$restaurantNavBar.render());
@@ -827,8 +813,8 @@ renderRestaurantNavBar_fn = function() {
 renderRestaurantFilter_fn = function() {
   this.$restaurantFilter = new RestaurantFilter({
     onFilterChange: (filterType) => {
-      this.$restaurantList.updateRestaurantList({
-        tabType: this.$restaurantNavBar.getCurrentTabType(),
+      this.store.setFilter({
+        ...this.store.state.currentFilter,
         filterType
       });
     }
@@ -836,17 +822,20 @@ renderRestaurantFilter_fn = function() {
   this.$main.append(this.$restaurantFilter.render());
 };
 renderRestaurantList_fn = function() {
-  const restaurantList = this.restaurantService.getRestaurants();
+  const restaurantList = this.store.getFilteredRestaurants({
+    tabType: NAV_BAR_KEYS.all,
+    filterType: {
+      categoryFilterType: CATEGORY[0],
+      sortFilterType: "name"
+    }
+  });
   this.$restaurantList = new RestaurantList(restaurantList, {
-    getRestaurants: (options) => {
-      return this.restaurantService.getRestaurants(options);
-    },
     onToggleFavorite: (restaurantId) => {
-      this.restaurantService.toggleFavorite(restaurantId);
+      this.store.toggleFavorite(restaurantId);
+      this.store.updateSelectedRestaurant(restaurantId);
     },
     onOpenDetail: (restaurantId) => {
-      const restaurantInfo = this.restaurantService.getRestaurantInfo(restaurantId);
-      if (restaurantInfo) this.$restaurantDetail.openDetail(restaurantInfo);
+      this.store.updateSelectedRestaurant(restaurantId);
       this.$openDetailBottomSheet.open();
     }
   });
@@ -855,7 +844,10 @@ renderRestaurantList_fn = function() {
 renderSubmitFormBottomSheet_fn = function() {
   const $restaurantForm = new RestaurantForm({
     title: "새로운 음식점",
-    onSubmit: __privateMethod(this, _App_instances, handleSubmitForm_fn).bind(this),
+    onSubmit: (newRestaurantInfo) => {
+      this.store.addRestaurant(newRestaurantInfo);
+      this.$submitFormBottomSheet.close();
+    },
     onCancel: () => this.$submitFormBottomSheet.close()
   });
   this.$submitFormBottomSheet = new BottomSheetBase({
@@ -864,19 +856,14 @@ renderSubmitFormBottomSheet_fn = function() {
   });
   this.$main.append(this.$submitFormBottomSheet.render());
 };
-handleSubmitForm_fn = function(newRestaurantInfo) {
-  this.restaurantService.addRestaurant(newRestaurantInfo);
-  this.$submitFormBottomSheet.close();
-};
 renderOpenDetailBottomSheet_fn = function() {
   this.$restaurantDetail = new RestaurantDetail({
     onToggleFavorite: (restaurantId) => {
-      this.restaurantService.toggleFavorite(restaurantId);
-      const updatedInfo = this.restaurantService.getRestaurantInfo(restaurantId);
-      if (updatedInfo) this.$restaurantDetail.openDetail(updatedInfo);
+      this.store.toggleFavorite(restaurantId);
+      this.store.updateSelectedRestaurant(restaurantId);
     },
     onDelete: (restaurantId) => {
-      this.restaurantService.deleteRestaurant(restaurantId);
+      this.store.deleteRestaurant(restaurantId);
     },
     onClose: () => this.$openDetailBottomSheet.close()
   });
@@ -886,39 +873,6 @@ renderOpenDetailBottomSheet_fn = function() {
   });
   this.$main.append(this.$openDetailBottomSheet.render());
 };
-updateRestaurantList_fn = function() {
-  this.$restaurantList.updateRestaurantList({
-    tabType: this.$restaurantNavBar.getCurrentTabType(),
-    filterType: this.$restaurantFilter.getCurrentFilterType()
-  });
-};
-class RestaurantService {
-  constructor(restaurantStore2) {
-    __publicField(this, "restaurantStore");
-    this.restaurantStore = restaurantStore2;
-  }
-  addRestaurant(restaurantInfo) {
-    this.restaurantStore.addRestaurant(restaurantInfo);
-  }
-  deleteRestaurant(restaurantId) {
-    this.restaurantStore.deleteRestaurant(restaurantId);
-  }
-  getRestaurants(options = {
-    tabType: NAV_BAR_KEYS.all,
-    filterType: {
-      categoryFilterType: CATEGORY[0],
-      sortFilterType: "name"
-    }
-  }) {
-    return this.restaurantStore.getRestaurants(options);
-  }
-  getRestaurantInfo(restaurantId) {
-    return this.restaurantStore.getRestaurantInfo(restaurantId);
-  }
-  toggleFavorite(restaurantId) {
-    this.restaurantStore.toggleFavorite(restaurantId);
-  }
-}
 const generateUUID = () => {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0;
@@ -930,12 +884,28 @@ class RestaurantStore {
   constructor() {
     __privateAdd(this, _RestaurantStore_instances);
     __privateAdd(this, _restaurants, []);
-    __privateAdd(this, _listeners, /* @__PURE__ */ new Set());
+    __privateAdd(this, _currentFilter, {
+      tabType: NAV_BAR_KEYS.all,
+      filterType: {
+        categoryFilterType: CATEGORY[0],
+        sortFilterType: "name"
+      }
+    });
+    __privateAdd(this, _selectedRestaurant, {});
+    __privateAdd(this, _listeners, /* @__PURE__ */ new Map());
     __privateMethod(this, _RestaurantStore_instances, loadFromLocalStorage_fn).call(this);
   }
-  addRestaurant(restaurantInfo) {
+  get state() {
+    return {
+      restaurants: __privateGet(this, _restaurants),
+      filteredRestaurants: this.getFilteredRestaurants(__privateGet(this, _currentFilter)),
+      currentFilter: __privateGet(this, _currentFilter),
+      selectedRestaurant: __privateGet(this, _selectedRestaurant)
+    };
+  }
+  addRestaurant(restaurant) {
     const newRestaurant = {
-      ...restaurantInfo,
+      ...restaurant,
       id: generateUUID(),
       isFavorite: false
     };
@@ -950,7 +920,27 @@ class RestaurantStore {
     __privateMethod(this, _RestaurantStore_instances, saveToLocalStorage_fn).call(this);
     __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
   }
-  getRestaurants({
+  toggleFavorite(restaurantId) {
+    __privateSet(this, _restaurants, __privateGet(this, _restaurants).map(
+      (restaurant) => restaurant.id === restaurantId ? { ...restaurant, isFavorite: !restaurant.isFavorite } : restaurant
+    ));
+    __privateMethod(this, _RestaurantStore_instances, saveToLocalStorage_fn).call(this);
+    __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
+  }
+  setFilter(options) {
+    __privateSet(this, _currentFilter, options);
+    __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
+  }
+  updateSelectedRestaurant(restaurantId) {
+    const restaurantInfoById = __privateGet(this, _restaurants).find(
+      (restaurant) => restaurant.id === restaurantId
+    );
+    if (restaurantInfoById) {
+      __privateSet(this, _selectedRestaurant, restaurantInfoById);
+    }
+    __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
+  }
+  getFilteredRestaurants({
     tabType,
     filterType: { categoryFilterType, sortFilterType }
   }) {
@@ -981,38 +971,29 @@ class RestaurantStore {
     }
     return sortFilterTypeFn[sortFilterType](tabTypeFn[tabType](restaurants));
   }
-  getRestaurantInfo(restaurantId) {
-    return __privateGet(this, _restaurants).find(
-      (restaurant) => restaurant.id === restaurantId
-    );
-  }
-  toggleFavorite(restaurantId) {
-    __privateSet(this, _restaurants, __privateGet(this, _restaurants).map(
-      (restaurant) => restaurant.id === restaurantId ? { ...restaurant, isFavorite: !restaurant.isFavorite } : restaurant
-    ));
-    __privateMethod(this, _RestaurantStore_instances, saveToLocalStorage_fn).call(this);
-    __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
-  }
-  subscribe(listener) {
-    __privateGet(this, _listeners).add(listener);
-    return () => __privateGet(this, _listeners).delete(listener);
+  subscribe(key, callback) {
+    __privateGet(this, _listeners).set(key, callback);
+    callback(this.state);
+    return () => __privateGet(this, _listeners).delete(key);
   }
 }
 _restaurants = new WeakMap();
+_currentFilter = new WeakMap();
+_selectedRestaurant = new WeakMap();
 _listeners = new WeakMap();
 _RestaurantStore_instances = new WeakSet();
 loadFromLocalStorage_fn = function() {
   const savedRestaurants = localStorage.getItem("restaurants");
-  __privateSet(this, _restaurants, savedRestaurants ? JSON.parse(savedRestaurants) : []);
+  if (savedRestaurants) {
+    __privateSet(this, _restaurants, JSON.parse(savedRestaurants));
+    __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
+  }
 };
 saveToLocalStorage_fn = function() {
   localStorage.setItem("restaurants", JSON.stringify(__privateGet(this, _restaurants)));
 };
 notifyListeners_fn = function() {
-  __privateGet(this, _listeners).forEach((listener) => listener(__privateGet(this, _restaurants)));
+  __privateGet(this, _listeners).forEach((listener) => listener(this.state));
 };
-const restaurantStore = new RestaurantStore();
-const restaurantService = new RestaurantService(
-  restaurantStore
-);
-new App(restaurantStore, restaurantService);
+const store = new RestaurantStore();
+new App(store);
