@@ -303,7 +303,7 @@ class RestaurantForm {
       name: new NameInput().render(),
       distance: new SelectBox({
         label: "distance",
-        options: DISTANCE
+        options: [...DISTANCE]
       }).render(),
       description: new DescriptionInput().render(),
       link: new LinkInput().render()
