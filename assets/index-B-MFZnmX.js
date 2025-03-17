@@ -832,7 +832,6 @@ renderRestaurantList_fn = function() {
   this.$restaurantList = new RestaurantList(restaurantList, {
     onToggleFavorite: (restaurantId) => {
       this.store.toggleFavorite(restaurantId);
-      this.store.updateSelectedRestaurant(restaurantId);
     },
     onOpenDetail: (restaurantId) => {
       this.store.updateSelectedRestaurant(restaurantId);
@@ -860,7 +859,6 @@ renderOpenDetailBottomSheet_fn = function() {
   this.$restaurantDetail = new RestaurantDetail({
     onToggleFavorite: (restaurantId) => {
       this.store.toggleFavorite(restaurantId);
-      this.store.updateSelectedRestaurant(restaurantId);
     },
     onDelete: (restaurantId) => {
       this.store.deleteRestaurant(restaurantId);
@@ -924,6 +922,7 @@ class RestaurantStore {
     __privateSet(this, _restaurants, __privateGet(this, _restaurants).map(
       (restaurant) => restaurant.id === restaurantId ? { ...restaurant, isFavorite: !restaurant.isFavorite } : restaurant
     ));
+    this.updateSelectedRestaurant(restaurantId);
     __privateMethod(this, _RestaurantStore_instances, saveToLocalStorage_fn).call(this);
     __privateMethod(this, _RestaurantStore_instances, notifyListeners_fn).call(this);
   }
